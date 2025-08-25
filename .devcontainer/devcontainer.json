@@ -38,7 +38,7 @@
   "postStartCommand": "go mod download && go mod tidy",
 
   // "remoteUser": "vscode",
-  "workspaceFolder": "/workspace",
+  // "workspaceFolder": "/workspace",
 
   "forwardPorts": [
     8070,  // API
