@@ -1,0 +1,31 @@
+# Build stage
+FROM golang:1.24 AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+COPY .env .
+
+# Install air for live reload
+RUN go install github.com/air-verse/air@latest
+
+# Build binaries
+RUN go build -o bin/reverse-proxy ./cmd/reverse-proxy/main.go
+
+# Run stage
+FROM golang:1.24
+
+WORKDIR /app
+
+# Install necessaries
+RUN apt-get update && \
+    apt-get install -y curl net-tools
+
+# Copy built binaries
+COPY --from=builder /app/bin /app/bin
+COPY . .
+COPY .env .
+CMD []

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Open DevPod in VS Code</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #f9f9f9;
+    }
+    button {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #007acc;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #005f99;
+    }
+  </style>
+</head>
+<body>
+  <button onclick="openVSCode()">Open DevPod Workspace in VS Code</button>
+
+  <script>
+    function openVSCode() {
+      // Replace Ubuntu and the workspace path accordingly
+      const vscodeUri = "vscode://vscode-remote/wsl+Ubuntu/home/nishithcs";
+      window.location.href = vscodeUri;
+    }
+  </script>
+</body>
+</html>

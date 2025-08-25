@@ -1,0 +1,34 @@
+# Build stage
+FROM golang:1.24 AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+COPY .env .
+
+# Install air for live reload
+RUN go install github.com/air-verse/air@latest
+
+# Build binaries
+RUN go build -o bin/server ./cmd/api/main.go
+RUN go build -o bin/consumer ./cmd/consumer/main.go
+
+# Run stage
+FROM golang:1.24
+
+WORKDIR /app
+
+# Copy built binaries and Air
+COPY --from=builder /app/bin /app/bin
+COPY --from=builder /go/bin/air /usr/local/bin/air
+COPY . .
+COPY .env .
+
+# Expose API port
+EXPOSE 8080
+
+# Default command: use Air
+CMD ["air", "-c", ".air.toml"]

@@ -1,61 +1,64 @@
-// For format details, see https://aka.ms/devcontainer.json.
 {
-	// A display name for the container, shown in the UI.
-	"name": "Python & Flask Advanced Example",
+  "name": "Cluster Code Service Dev Environment",
+  "image": "mcr.microsoft.com/devcontainers/go:1.24-bullseye",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
 
-	// Use Docker Compose to orchestrate our services.
-	"dockerComposeFile": "docker-compose.yml",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "go.gopath": "/go",
+        "go.goroot": "/usr/local/go",
+        "go.formatTool": "goimports",
+        "go.formatOnSave": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit"
+        }
+      }
+    }
+  },
 
-	// The name of the service within docker-compose.yml to use for the dev container.
-	"service": "app",
+  "postStartCommand": "go mod download && go mod tidy",
 
-	// The path of the workspace folder inside the container.
-	"workspaceFolder": "/workspace",
+  // "remoteUser": "vscode",
+  "workspaceFolder": "/workspace",
 
-	// --- Port Forwarding & UI ---
-	"forwardPorts": [5000, 6379],
-	"portsAttributes": {
-		"5000": {
-			"label": "Flask App",
-			"onAutoForward": "openPreview"
-		},
-		"6379": {
-			"label": "Redis DB",
-			"onAutoForward": "silent"
-		}
-	},
+  "forwardPorts": [
+    8070,  // API
+    5422,  // PostgreSQL
+    6379,  // Redis
+    5672,  // RabbitMQ
+    15672, // RabbitMQ Management
+    27017, // MongoDB
+    8091,  // Mongo Express
+    8081,  // Asynq Dashboard
+    83     // Reverse Proxy
+  ],
 
-	// --- Lifecycle Hooks ---
-	// A command to run after the container is created.
-	"postCreateCommand": "bash .devcontainer/post-create.sh",
-
-	// --- VS Code Customizations ---
-	"customizations": {
-		"vscode": {
-			// A list of VS Code extension IDs to install.
-			"extensions": [
-				"ms-python.python",
-				"ms-python.vscode-pylance",
-				"ms-azuretools.vscode-docker",
-				"redhat.vscode-yaml",
-				"VisualStudioExptTeam.vscodeintellicode"
-			],
-			// Default settings for the VS Code instance inside the container.
-			"settings": {
-				"python.defaultInterpreterPath": "/usr/local/bin/python",
-				"python.linting.pylintEnabled": true,
-				"python.linting.enabled": true
-			}
-		}
-	},
-
-	// --- Features ---
-	// Add pre-packaged functionality. Here, we add the GitHub CLI.
-	"features": {
-		"ghcr.io/devcontainers/features/github-cli:1": {}
-	},
-
-	// --- Container User ---
-	// Run as the non-root 'vscode' user to avoid permission issues.
-	"remoteUser": "vscode"
-}
+  "environmentVariables": {
+    "GO111MODULE": "on",
+    "GOOS": "linux",
+    "GOARCH": "amd64",
+    "CGO_ENABLED": "1",
+    "GOPATH": "/go",
+    "GOROOT": "/usr/local/go",
+    "PATH": "/usr/local/go/bin:/go/bin:${containerEnv:PATH}"
+  }
+} 

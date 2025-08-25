@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>WebSocket Terminal Log</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            margin: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+
+        #messages {
+            border: 1px solid #333;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            background-color: #1e1e1e;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+
+        .message {
+            margin-bottom: 5px;
+        }
+
+        .info {
+            color: #9cdcfe;
+        }
+
+        .done {
+            color: #4caf50;
+        }
+
+        .fatal, .error {
+            color: #f44747;
+        }
+
+        .debug {
+            color: #b5cea8;
+        }
+
+        .warn {
+            color: #dcdcaa;
+        }
+
+        .default {
+            color: #d4d4d4;
+        }
+    </style>
+</head>
+<body>
+<h2 style="color: #ffffff;">WebSocket Terminal Log</h2>
+<div id="messages"></div>
+
+<script>
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTQ0ODE3OTUsImlhdCI6MTc1NDM5NTM5NSwib3JnX2lkIjoxLCJwdXJwb3NlIjoid3MtYXV0aCIsInVzZXJfaWQiOjE2fQ.hPyNrp2MxI5HRLegC_M59KGffweQA4gVGtIDiGFjB1U";
+    const wsUrl = `ws://localhost:8070/ws?token=${encodeURIComponent(token)}`;
+    const socket = new WebSocket(wsUrl);
+    const messagesDiv = document.getElementById("messages");
+
+    socket.onopen = () => {
+        console.log("Connected to WebSocket");
+
+        const subscribeMessage = {
+            action: "subscribe",
+            channel: "workspace_5_logs"
+        };
+        socket.send(JSON.stringify(subscribeMessage));
+    };
+
+    socket.onmessage = (event) => {
+        let data;
+        try {
+            data = JSON.parse(event.data);
+        } catch (e) {
+            console.error("Invalid JSON:", e);
+            return;
+        }
+
+        if (data.channel === "workspace_5_logs") {
+            const logData = data.data || {};
+            const logTime = logData.time || new Date().toLocaleTimeString();
+            const logType = (logData.type || "default").toLowerCase();
+            const logText = logData.text || "No message";
+
+            const messageEl = document.createElement("div");
+            messageEl.className = `message ${logType}`;
+            messageEl.textContent = `[${logTime}] ${logText}`;
+
+            messagesDiv.appendChild(messageEl);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    };
+
+    socket.onclose = () => {
+        console.log("WebSocket connection closed");
+    };
+
+    socket.onerror = (err) => {
+        console.error("WebSocket error", err);
+    };
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Build stage
+FROM golang:1.24 AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+COPY .env .
+
+# Build binaries
+RUN go build -o bin/worker ./cmd/worker/main.go
+
+# Run stage
+FROM golang:1.24
+
+WORKDIR /app
+
+# Install DevPod CLI and socat
+RUN apt-get update && \
+    apt-get install -y curl socat net-tools && \
+    curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" && \
+    chmod +x devpod && \
+    mv devpod /usr/local/bin/devpod && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy built binaries
+COPY --from=builder /app/bin /app/bin
+COPY . .
+COPY .env .
+CMD []

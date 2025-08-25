@@ -1,0 +1,347 @@
+{
+    "name": "Cluster Code Service Dev Environment",
+    "image": "mcr.microsoft.com/devcontainers/go:1.24-bullseye",
+    
+    "features": {
+      "ghcr.io/devcontainers/features/docker-in-docker:2": {
+        "version": "latest",
+        "dockerDashComposeVersion": "v2"
+      },
+      "ghcr.io/devcontainers/features/git:1": {
+        "version": "latest",
+        "ppa": "false"
+      },
+      "ghcr.io/devcontainers/features/github-cli:1": {
+        "version": "latest"
+      },
+      "ghcr.io/devcontainers/features/node:1": {
+        "version": "18"
+      }
+    },
+  
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "golang.go",
+          "ms-vscode.vscode-json",
+          "redhat.vscode-yaml",
+          "ms-azuretools.vscode-docker",
+          "ms-vscode-remote.remote-containers",
+          "eamodio.gitlens",
+          "ms-vscode.makefile-tools",
+          "streetsidesoftware.code-spell-checker",
+          "ms-vscode.vscode-typescript-next"
+        ],
+        "settings": {
+          "go.useLanguageServer": true,
+          "go.gopath": "/go",
+          "go.goroot": "/usr/local/go",
+          "go.toolsManagement.checkForUpdates": "local",
+          "go.lintTool": "golangci-lint",
+          "go.lintOnSave": "package",
+          "go.formatTool": "goimports",
+          "go.formatOnSave": true,
+          "go.testOnSave": false,
+          "go.buildOnSave": "package",
+          "go.vetOnSave": "package",
+          "go.coverOnSave": false,
+          "go.gocodeAutoBuild": false,
+          "files.watcherExclude": {
+            "**/bin/**": true,
+            "**/tmp/**": true,
+            "**/vendor/**": true
+          },
+          "search.exclude": {
+            "**/bin": true,
+            "**/tmp": true,
+            "**/vendor": true,
+            "**/node_modules": true
+          },
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          },
+          "docker.host": "unix:///var/run/docker.sock"
+        }
+      }
+    },
+  
+    "mounts": [
+      "source=${localWorkspaceFolder}/.devcontainer/dotfiles,target=/home/vscode/.dotfiles,type=bind,consistency=cached"
+    ],
+  
+    "postCreateCommand": "bash .devcontainer/setup.sh",
+  
+    "postStartCommand": "go mod download && go mod tidy",
+  
+    "remoteUser": "vscode",
+  
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "workspaceFolder": "/workspace",
+  
+    "forwardPorts": [
+      8070,  // API
+      5422,  // PostgreSQL
+      6379,  // Redis
+      5672,  // RabbitMQ
+      15672, // RabbitMQ Management
+      27017, // MongoDB
+      8091,  // Mongo Express
+      8081,  // Asynq Dashboard
+      83     // Reverse Proxy
+    ],
+  
+    "portsAttributes": {
+      "8070": {
+        "label": "API Server",
+        "onAutoForward": "notify"
+      },
+      "5422": {
+        "label": "PostgreSQL",
+        "onAutoForward": "silent"
+      },
+      "6379": {
+        "label": "Redis",
+        "onAutoForward": "silent"
+      },
+      "5672": {
+        "label": "RabbitMQ",
+        "onAutoForward": "silent"
+      },
+      "15672": {
+        "label": "RabbitMQ Management",
+        "onAutoForward": "notify"
+      },
+      "27017": {
+        "label": "MongoDB",
+        "onAutoForward": "silent"
+      },
+      "8091": {
+        "label": "Mongo Express",
+        "onAutoForward": "notify"
+      },
+      "8081": {
+        "label": "Asynq Dashboard",
+        "onAutoForward": "notify"
+      },
+      "83": {
+        "label": "Reverse Proxy",
+        "onAutoForward": "notify"
+      }
+    },
+  
+    "environmentVariables": {
+      "GO111MODULE": "on",
+      "GOOS": "linux",
+      "GOARCH": "amd64",
+      "CGO_ENABLED": "1",
+      "GOPATH": "/go",
+      "GOROOT": "/usr/local/go",
+      "PATH": "/usr/local/go/bin:/go/bin:${containerEnv:PATH}",
+      "DOCKER_BUILDKIT": "1",
+      "COMPOSE_DOCKER_CLI_BUILD": "1",
+      "DOCKER_DEFAULT_PLATFORM": "linux/amd64"
+    },
+  
+    "runServices": [
+      "postgres",
+      "redis",
+      "rabbitmq",
+      "mongodb"
+    ],
+  
+    "service": {
+      "postgres": {
+        "image": "postgres:15-alpine",
+        "environment": {
+          "POSTGRES_USER": "clusterix",
+          "POSTGRES_PASSWORD": "clusterix123",
+          "POSTGRES_DB": "clusterix_dev"
+        },
+        "ports": ["5422:5432"],
+        "volumes": ["postgres-data:/var/lib/postgresql/data"]
+      },
+      "redis": {
+        "image": "redis:7-alpine",
+        "command": "redis-server --requirepass supersecret123",
+        "ports": ["6379:6379"]
+      },
+      "rabbitmq": {
+        "image": "rabbitmq:3.9-management",
+        "environment": {
+          "RABBITMQ_DEFAULT_USER": "guest",
+          "RABBITMQ_DEFAULT_PASS": "guest"
+        },
+        "ports": ["5672:5672", "15672:15672"],
+        "volumes": ["rabbitmq-data:/var/lib/rabbitmq"]
+      },
+      "mongodb": {
+        "image": "mongo:4",
+        "environment": {
+          "MONGO_INITDB_ROOT_USERNAME": "admin",
+          "MONGO_INITDB_ROOT_PASSWORD": "password"
+        },
+        "ports": ["27017:27017"],
+        "volumes": ["mongodb-data:/data/db"]
+      }
+    },
+  
+    "volumes": {
+      "postgres-data": {},
+      "rabbitmq-data": {},
+      "mongodb-data": {}
+    },
+  
+    "initializeCommand": "git config --global --add safe.directory ${localWorkspaceFolder}",
+  
+    "updateRemoteUserUID": true,
+  
+    "overrideCommand": false,
+  
+    "shutdownAction": "stopCompose",
+  
+    "waitFor": "onCreateCommand",
+  
+    "hostRequirements": {
+      "cpus": 4,
+      "memory": "8gb",
+      "storage": "32gb"
+    },
+  
+    "containerEnv": {
+      "DEV_CONTAINER": "true"
+    },
+  
+    "remoteEnv": {
+      "DB_HOST": "localhost",
+      "DB_PORT": "5422",
+      "DB_USER": "clusterix",
+      "DB_PASSWORD": "clusterix123",
+      "DB_NAME": "clusterix_dev",
+      "REDIS_HOST": "localhost",
+      "REDIS_PORT": "6379",
+      "REDIS_PASSWORD": "supersecret123",
+      "RABBITMQ_HOST": "localhost",
+      "RABBITMQ_PORT": "5672",
+      "RABBITMQ_USER": "guest",
+      "RABBITMQ_PASS": "guest",
+      "MONGO_HOST": "localhost",
+      "MONGO_PORT": "27017",
+      "MONGO_USERNAME": "admin",
+      "MONGO_PASSWORD": "password"
+    },
+  
+    "capAdd": [
+      "SYS_PTRACE"
+    ],
+  
+    "securityOpt": [
+      "seccomp:unconfined"
+    ],
+  
+    "privileged": false,
+  
+    "userEnvProbe": "loginInteractiveShell",
+  
+    "dotfilesRepository": "https://github.com/your-username/dotfiles.git",
+    "dotfilesTargetPath": "~/.dotfiles",
+    "dotfilesInstallCommand": "bash ~/.dotfiles/install.sh",
+  
+    "prebuild": {
+      "args": {
+        "VARIANT": "1.24-bullseye"
+      }
+    },
+  
+    "build": {
+      "args": {
+        "VARIANT": "1.24-bullseye"
+      }
+    },
+  
+    "onCreateCommand": "echo 'Setting up development environment...'",
+    "onPostCreateCommand": "echo 'Development environment ready!'",
+    "onPostStartCommand": "echo 'Container started successfully!'",
+  
+    "workspace": {
+      "mount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+      "folder": "/workspace"
+    },
+  
+    "devPorts": {
+      "8070": {
+        "label": "API Server",
+        "protocol": "http"
+      },
+      "15672": {
+        "label": "RabbitMQ Management",
+        "protocol": "http"
+      },
+      "8091": {
+        "label": "Mongo Express",
+        "protocol": "http"
+      },
+      "8081": {
+        "label": "Asynq Dashboard",
+        "protocol": "http"
+      }
+    },
+  
+    "lifecycleHooks": {
+      "postCreate": "echo 'Post-create hook executed'",
+      "postStart": "echo 'Post-start hook executed'",
+      "postAttach": "echo 'Post-attach hook executed'"
+    },
+  
+    "experimentalVSCodeServer": false,
+  
+    "overrideFeatureInstallOrder": [
+      "ghcr.io/devcontainers/features/common-utils:2",
+      "ghcr.io/devcontainers/features/git:1",
+      "ghcr.io/devcontainers/features/github-cli:1",
+      "ghcr.io/devcontainers/features/docker-in-docker:2",
+      "ghcr.io/devcontainers/features/node:1"
+    ],
+  
+    "installZsh": true,
+    "installOhMyZsh": true,
+    "upgradePackages": true,
+  
+    "configureZshAsDefaultShell": true,
+  
+    "zshrc": "export PATH=$PATH:/go/bin",
+    "bashrc": "export PATH=$PATH:/go/bin",
+  
+    "user": "vscode",
+  
+    "uid": "1000",
+    "gid": "1000",
+  
+    "skipNonComposeWarning": true,
+  
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "api",
+    "workspaceFolder": "/workspace",
+  
+    "runArgs": [
+      "--init",
+      "--cap-add=SYS_PTRACE",
+      "--security-opt=seccomp:unconfined"
+    ],
+  
+    "containerUser": "vscode",
+  
+    "mounts": [
+      "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
+  
+    "features": {
+      "ghcr.io/devcontainers/features/common-utils:2": {
+        "installZsh": true,
+        "username": "vscode",
+        "userUid": "1000",
+        "userGid": "1000",
+        "upgradePackages": true
+      }
+    }
+  } 

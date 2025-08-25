@@ -1,0 +1,182 @@
+services:
+  api:
+    container_name: cluster-code-api
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8070:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cluster-code-network
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - REDIS_PASSWORD=supersecret123
+    command: air -c .air.toml
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:${SERVER_PORT:-8080}/health" ]
+      interval: 120s
+      timeout: 5s
+      retries: 5
+
+  consumer:
+    container_name: cluster-code-consumer
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cluster-code-network
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ./bin/consumer
+
+  rabbitmq:
+    container_name: cluster-code-rabbitmq
+    image: rabbitmq:3.9-management
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_UI_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - cluster-code-network
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 120s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    container_name: cluster-code-postgres
+    image: postgres:15-alpine
+    ports:
+      - "5422:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - cluster-code-network
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "${DB_USER}", "-d", "${DB_NAME}" ]
+      interval: 120s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: cluster-code-redis
+    image: redis:7-alpine
+    command: redis-server --requirepass supersecret123
+    ports:
+      - "6379:6379"
+    networks:
+      - cluster-code-network
+
+  asynqmon:
+    image: hibiken/asynqmon
+    container_name: cluster-code-asynq-dashboard
+    ports:
+      - "8081:8080"
+    environment:
+      - REDIS_ADDR=redis:6379                # host:port required
+      - REDIS_PASSWORD=${REDIS_PASSWORD}     # optional
+    networks:
+      - cluster-code-network
+
+  mongodb:
+    container_name: cluster-code-mongodb
+    image: mongo:4
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - cluster-code-network
+
+  mongo-express:
+    container_name: cluster-code-mongo-express
+    image: mongo-express:latest
+    restart: unless-stopped
+    ports:
+      - "8091:8081"
+    env_file:
+      - .env
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password}@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_PASSWORD:-password}
+    depends_on:
+      - mongodb
+    networks:
+      - cluster-code-network
+
+  worker:
+    container_name: cluster-code-worker
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    command: go run cmd/worker/main.go
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - api
+    networks:
+      - cluster-code-network
+    env_file:
+      - .env
+    environment:
+      - REDIS_PASSWORD=supersecret123
+    ports:
+      - "20000-20999:20000-20999"
+
+  reverse-proxy:
+    container_name: cluster-code-reverse-proxy
+    build:
+      context: .
+      dockerfile: Dockerfile.reverse-proxy
+    command: go run cmd/reverse-proxy/main.go
+    depends_on:
+      - worker
+    networks:
+      - cluster-code-network
+    env_file:
+      - .env
+    ports:
+      - "83:80"
+
+networks:
+  cluster-code-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  mongodb-data:

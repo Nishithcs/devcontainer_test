@@ -1,0 +1,15 @@
+variables:
+  REPO: ${ECR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}
+  GIT_SUBMODULE_STRATEGY: recursive
+
+include:
+  - 'https://git.innoscripta.com/api/v4/projects/${CICD_REPO_PROJECT_ID}/repository/files/ci-files%2Fbuild.gitlab-ci.yml/raw?ref=${CICD_REPO_PROJECT_REF}&private_token=${CICD_REPO_ACCESS_TOKEN}&.yml'
+  - 'https://git.innoscripta.com/api/v4/projects/${CICD_REPO_PROJECT_ID}/repository/files/ci-files%2Fdevelopment.gitlab-ci.yml/raw?ref=${CICD_REPO_PROJECT_REF}&private_token=${CICD_REPO_ACCESS_TOKEN}&.yml'
+  - 'https://git.innoscripta.com/api/v4/projects/${CICD_REPO_PROJECT_ID}/repository/files/ci-files%2Fstaging.gitlab-ci.yml/raw?ref=${CICD_REPO_PROJECT_REF}&private_token=${CICD_REPO_ACCESS_TOKEN}&.yml'
+  - 'https://git.innoscripta.com/api/v4/projects/${CICD_REPO_PROJECT_ID}/repository/files/ci-files%2Fproduction.gitlab-ci.yml/raw?ref=${CICD_REPO_PROJECT_REF}&private_token=${CICD_REPO_ACCESS_TOKEN}&.yml'
+
+image: ${PIPE_IMAGE}
+
+stages:
+  - build
+  - deploy
